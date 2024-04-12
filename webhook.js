@@ -172,7 +172,7 @@ export const deleteEntry = async (entry, parent) => {
     }
   } else {
     for (let partial of entry.contents) {
-      await deleteEntry(await (await fetch(process.env.webhook + "/messages/" + partId, {"cache": "no-store"})).json(), partial.metadata)
+      await deleteEntry(await (await fetch(process.env.webhook + "/messages/" + partial.metadata, {"cache": "no-store"})).json(), entry.id)
     }
   }
   await mfetch(process.env.webhook + "/messages/" + entry.id, {"method": "DELETE"})
