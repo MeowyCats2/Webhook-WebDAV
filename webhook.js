@@ -20,14 +20,6 @@ const deleteCache = (key) => {
 }
 const throwOn4xx = async (res) => {
 	if (res.status >= 400 && res.status < 500) {
-		if (res.status === 429) {
-			try {
-				const data = await res.json()
-				await new Promise(resolve => setTimeout(resolve, data.retry_after * 1000))
-				return res
-			} catch (e) {
-			}
-		}
 		console.error(res)
 		console.error(await res.text())
 		throw new Error(res.status)
@@ -38,7 +30,7 @@ const mfetch = async (...body) => {
 	const response = await fetch(...body);
 	if (response.status === 429) {
 		try {
-			const data = await res.json()
+			const data = await response.json()
 			if (data.retry_after) {
 				await new Promise(resolve => setTimeout(resolve, data.retry_after * 1000))
 				return await mfetch(...body)
