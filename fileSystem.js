@@ -55,13 +55,14 @@ export class WebFileSystem extends webdav.FileSystem {
   }
   async _openWriteStream (path, info, callback) {
     console.log("writing")
-    if (await entryFromPath(path.paths)) {
-      await deleteEntry(await entryFromPath(path.paths), await entryFromPath(path.paths.slice(0, -1)))
-    }
     const content = [];
     const stream = new webdav.VirtualFileWritable(content);
     stream.on('finish', async () => {
+		console.log("finishing up")
       const filename = path.paths.at(-1)
+	  if (await entryFromPath(path.paths)) {
+		await deleteEntry(await entryFromPath(path.paths), await entryFromPath(path.paths.slice(0, -1)))
+	  }
       await appendToFolder("file", (await createFile(new Blob(content), filename)).id, (await entryFromPath(path.paths.slice(0, -1))).id, filename)
       console.log("finished")
     })
@@ -98,7 +99,9 @@ export class WebFileSystem extends webdav.FileSystem {
   }
   async _creationDate (path, info, callback) {
     console.log("creation date")
-    callback(null, (new Date((await messageFromPath(path.paths)).timestamp)).getTime())
+	const data = (await messageFromPath(path.paths))
+	if (!data) return callback(null)
+    callback(null, (new Date(data.timestamp)).getTime())
   }
   async _lastModifiedDate (path, info, callback) {
     console.log("last modified date")
