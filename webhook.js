@@ -191,8 +191,7 @@ export const messageFromPath = async (path) => {
   return await (await mfetch(process.env.webhook + "/messages/" + (await entryFromPath(path)).id, {"cache": "no-store"})).json()
 }
 export const moveEntry = async (entry, fromId, toId) => {
-  const fromMsg = await getEntry(fromId)
-  const fromData = await (await mfetch(fromMsg.attachments[0].url)).json()
+  const fromData = await getEntry(fromId)
   fromData.contents.splice(fromData.contents.find(c => entry.id === c.metadata), 1)
   await edit_msg(fromId, new Blob([JSON.stringify(fromData)]), "file.json")
   setCache(fromId, fromData)
