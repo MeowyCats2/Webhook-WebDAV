@@ -32,7 +32,10 @@ const mfetch = async (...body) => {
 	if (notFoundURLs.includes(body[0])) {
 		throw new Error("404")
 	}
-	if (ratelimitBucketReset && ratelimitBucketReset > Date.now() / 1000) await new Promise(resolve => setTimeout(resolve, (ratelimitBucketReset - Date.now() / 1000) * 1000))
+	if (ratelimitBucketReset && ratelimitBucketReset > Date.now() / 1000) {
+		await new Promise(resolve => setTimeout(resolve, (ratelimitBucketReset - Date.now() / 1000) * 1000))
+		return await mfetch(...body)
+	}
 	const response = await fetch(...body);
 	console.log(response.headers.get("X-RateLimit-Remaining"))
 	if (response.headers.get("X-RateLimit-Remaining") === "0") {
