@@ -30,7 +30,7 @@ const mfetch = async (...body) => {
 	const response = await fetch(...body);
 	if (response.status === 429) {
 		try {
-			const data = await response.json()
+			const data = await response.clone().json()
 			if (data.retry_after) {
 				await new Promise(resolve => setTimeout(resolve, data.retry_after * 1000))
 				return await mfetch(...body)
