@@ -26,8 +26,18 @@ const throwOn4xx = async (res) => {
 	}
 	return res
 }
+let ratelimitBucketReset = null
+let notFoundURLs = []
 const mfetch = async (...body) => {
+	if (notFoundURLs.includes(body[0])) {
+		throw new Error("404")
+	}
+	if (ratelimitBucketReset && ratelimitBucketReset > Date.now() / 1000) await new Promise(resolve => setTimeout(resolve, (ratelimitBucketReset - Date.now() / 1000) * 1000))
 	const response = await fetch(...body);
+	console.log(response.headers.get("X-RateLimit-Remaining"))
+	if (response.headers.get("X-RateLimit-Remaining") === "0") {
+		ratelimitBucketReset = +response.headers.get("X-RateLimit-Reset")
+	}
 	if (response.status === 429) {
 		try {
 			const data = await response.clone().json()
@@ -36,7 +46,9 @@ const mfetch = async (...body) => {
 				return await mfetch(...body)
 			}
 		} catch (e) {}
+		console.log()
 	}
+	if (response.status === 404) notFoundURLs.push(body[0])
 	return await throwOn4xx(response)
 }
 const deletedIds = []
@@ -162,7 +174,6 @@ export const appendToFolder = async (type, entryId, folderId, name) => {
   setCache(folderId, folderData)
 	console.log(folderData)
 	console.log("Entry " + entryId + " appended")
-	console.log((await (await fetch(process.env.webhook + "/messages/" + entryId, {"cache": "no-store"})).json()))
 }
 export const deleteEntry = async (entry, parent) => {
 	console.log("Deletion!")
