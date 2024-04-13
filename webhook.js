@@ -97,6 +97,7 @@ export const entryFromPath = async (paths) => {
   let last = await getEntry(process.env.root)
   let id = process.env.root
   for (let path of paths) {
+	if (!last) return null
     const found = last.contents.find(entry => entry.name === path)
     if (!found) {
       console.warn(paths)
