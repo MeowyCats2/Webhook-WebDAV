@@ -204,7 +204,7 @@ export const renameEntry = async (entryId, parentId, newName) => {
   await edit_msg(entryId, new Blob([JSON.stringify(entryData)]), "file.json")
   setCache(entryId, entryData)
   const parentData = await getEntry(parentId)
-  parentData.find(c => c.metadata === entryId).name = newName
+  parentData.contents.find(c => c.metadata === entryId).name = newName
   console.log(parentData)
   console.log(newName)
   await edit_msg(parentId, new Blob([JSON.stringify(parentData)]), "file.json")

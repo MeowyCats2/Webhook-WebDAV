@@ -18,7 +18,7 @@ function WebFileSystemSerializer()
         },
         unserialize(serializedData, callback)
         {
-            const fs = new WebFileSystem(serializedData.url);
+            const fs = new WebhookFileSystem(serializedData.url);
             fs.props = serializedData.props;
             callback(null, fs);
         },
@@ -27,7 +27,7 @@ function WebFileSystemSerializer()
 }
 
 // File system
-export class WebFileSystem extends webdav.FileSystem {
+export class WebhookFileSystem extends webdav.FileSystem {
   constructor (url) {
     super(new WebFileSystemSerializer());       this.props = new webdav.LocalPropertyManager();
     this.locks = new webdav.LocalLockManager();
@@ -78,7 +78,11 @@ export class WebFileSystem extends webdav.FileSystem {
     callback()
   }
   async _move (from, to, info, callback) {
-    await moveEntry(await entryFromPath(from.paths), (await messageFromPath(from.paths.slice(0, -1))).id, (await messageFromPath(to.paths.slice(0, -1))).id)
+	const entry = await entryFromPath(from.paths)
+	const oldParent = (await messageFromPath(from.paths.slice(0, -1))).id
+	const newParent = (await messageFromPath(to.paths.slice(0, -1))).id
+    if (oldParent !== newParent) await moveEntry(entry, oldParent, newParent)
+	if (from.paths.at(-1) !== to.paths.at(-1)) await renameEntry(entry.id, newParent, to.paths.at(-1))
     callback()
   }
   async _rename (path, newName, info, callback) {
