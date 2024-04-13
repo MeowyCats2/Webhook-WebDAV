@@ -22,20 +22,30 @@ const throwOn4xx = async (res) => {
 	if (res.status >= 400 && res.status < 500) {
 		console.error(res)
 		console.error(await res.text())
+		console.error((new Error()).stack)
 		throw new Error(res.status)
 	}
 	return res
 }
 let ratelimitBucketReset = null
-let notFoundURLs = []
+const notFoundURLs = []
+const requestQueue = []
+let processingRequest = false
 const mfetch = async (...body) => {
 	if (notFoundURLs.includes(body[0])) {
 		throw new Error("404")
 	}
 	if (ratelimitBucketReset && ratelimitBucketReset > Date.now() / 1000) {
 		await new Promise(resolve => setTimeout(resolve, (ratelimitBucketReset - Date.now() / 1000) * 1000))
+		if (processingRequest) {
+			let resolve = null
+			const promise = new Promise(res => resolve = res)
+			requestQueue.push(resolve)
+			await promise
+		}
 		return await mfetch(...body)
 	}
+	processingRequest = true
 	const response = await fetch(...body);
 	console.log(response.headers.get("X-RateLimit-Remaining"))
 	if (response.headers.get("X-RateLimit-Remaining") === "0") {
@@ -52,6 +62,8 @@ const mfetch = async (...body) => {
 		console.log()
 	}
 	if (response.status === 404) notFoundURLs.push(body[0])
+	processingRequest = false
+	if (requestQueue.length > 0) requestQueue.shift()()
 	return await throwOn4xx(response)
 }
 const deletedIds = []
@@ -81,6 +93,7 @@ const edit_msg = async (id, blob, name) => {
 export const getEntry = async (id) => {
   const cached = getCache(id);
   if (cached) return cached;
+  if (deletedIds.includes(id)) return null
   try {
     const msg = (await (await mfetch(process.env.webhook + "/messages/" + id, {"cache": "no-store"})).json())
     const data = await (await mfetch(msg.attachments[0].url)).json()
