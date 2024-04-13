@@ -1,6 +1,6 @@
 import { v2 as webdav } from 'webdav-server'
 import { Readable, Writable } from "node:stream"
-import { getEntry, entryFromPath, downloadFile, createFile, createFolder, appendToFolder, deleteEntry, messageFromPath, moveEntry, renameEntry } from "./webhook.js"
+import { getEntry, entryFromPath, downloadFile, createFile, createFolder, appendToFolder, deleteEntry, messageFromPath, moveEntry, renameEntry, fixFolder } from "./webhook.js"
 // Serializer
 function WebFileSystemSerializer()
 {
@@ -95,6 +95,7 @@ export class WebhookFileSystem extends webdav.FileSystem {
     if (!data) {
       return callback(webdav.Errors.ResourceNotFound)
     }
+	await fixFolder(data.id)
     callback(null, data.contents.map(entry => entry.name))
   }
   async _size (path, info, callback) {

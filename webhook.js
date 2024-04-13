@@ -164,24 +164,28 @@ export const appendToFolder = async (type, entryId, folderId, name) => {
 	console.log((await (await fetch(process.env.webhook + "/messages/" + entryId, {"cache": "no-store"})).json()))
 }
 export const deleteEntry = async (entry, parent) => {
-  console.log("Deletion!")
-  deletedIds.push(entry.id)
-  if (entry.type === "file") {
-    for (let partId of entry.parts) {
-      await mfetch(process.env.webhook + "/messages/" + partId, {"method": "DELETE"})
-    }
-  } else {
-    for (let partial of entry.contents) {
-      await deleteEntry(await (await fetch(process.env.webhook + "/messages/" + partial.metadata, {"cache": "no-store"})).json(), entry.id)
-    }
-  }
-  await mfetch(process.env.webhook + "/messages/" + entry.id, {"method": "DELETE"})
-  const folderMsg = (await (await mfetch(process.env.webhook + "/messages/" + parent.id, {"cache": "no-store"})).json())
-  const folderData = await (await mfetch(folderMsg.attachments[0].url)).json()
-  folderData.contents.splice(folderData.contents.findIndex(c => entry.id === c.metadata), 1)
-  console.log(folderData)
-  await edit_msg(parent.id, new Blob([JSON.stringify(folderData)]), "file.json")
-  setCache(parent.id, folderData)
+	console.log("Deletion!")
+	deletedIds.push(entry.id)
+	try {
+		if (entry.type === "file") {
+			for (let partId of entry.parts) {
+				await mfetch(process.env.webhook + "/messages/" + partId, {"method": "DELETE"})
+			}
+		} else {
+			for (let partial of entry.contents) {
+				await deleteEntry(await (await fetch(process.env.webhook + "/messages/" + partial.metadata, {"cache": "no-store"})).json(), entry.id)
+			}
+		}
+    } catch (e) {
+		console.error(e)
+	}
+	await mfetch(process.env.webhook + "/messages/" + entry.id, {"method": "DELETE"})
+	const folderMsg = (await (await mfetch(process.env.webhook + "/messages/" + parent.id, {"cache": "no-store"})).json())
+	const folderData = await (await mfetch(folderMsg.attachments[0].url)).json()
+	folderData.contents.splice(folderData.contents.findIndex(c => entry.id === c.metadata), 1)
+	console.log(folderData)
+	await edit_msg(parent.id, new Blob([JSON.stringify(folderData)]), "file.json")
+	setCache(parent.id, folderData)
 }
 export const messageFromPath = async (path) => {
 	console.log("messageFromPath")
@@ -210,22 +214,28 @@ export const renameEntry = async (entryId, parentId, newName) => {
   await edit_msg(parentId, new Blob([JSON.stringify(parentData)]), "file.json")
 }
 export const fixFolder = async (folderId) => {
-  const folderMsg = (await (await mfetch(process.env.webhook + "/messages/" + folderId, {"cache": "no-store"})).json())
-	console.log(folderMsg)
-  const folderData = await (await mfetch(folderMsg.attachments[0].url)).json()
+  const folderData = await getEntry(folderId) // (await (await mfetch(process.env.webhook + "/messages/" + folderId, {"cache": "no-store"})).json())
+	//console.log(folderMsg)
+  //const folderData = await (await mfetch(folderMsg.attachments[0].url)).json()
   let newContents = []
+  let modified = false
   for (const entry of folderData.contents) {
-	if (await getEntry(entry.metadata)) newContents.push(entry)
+	if (await getEntry(entry.metadata)) {
+		newContents.push(entry)
+	} else {
+		modified = true
+	}
   }
-  folderData.contents = newContents
-  await edit_msg(folderId, new Blob([JSON.stringify(folderData)]), "file.json")
-  setCache(folderId, folderData)
+  if (modified) {
+	  folderData.contents = newContents
+	  await edit_msg(folderId, new Blob([JSON.stringify(folderData)]), "file.json")
+	  setCache(folderId, folderData)
+  }
 }
 
 console.log("m")
 console.log((await createFolder("Root")).id)
 //console.log(await entryFromPath(["Create your account.png"]))
-console.log(await fixFolder(process.env.root))
 console.log(await getEntry(process.env.root))
 console.log((await entryFromPath([])).id)
 //console.log(await appendToFolder((await createFile(new Blob(["meow"]), "meow.txt")).id, (await entryFromPath([])).id))
